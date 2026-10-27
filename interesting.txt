@@ -1,0 +1,228 @@
+一款适用于 Cloudflare WARP 的 Windows 客户端，它能够扫描最佳端点，并通过一键连接——基于 的 vernette/warpscout扫描引擎构建，并嵌入了 Clash (mihomo) 核心，用于实际的流量路由。
+
+下载： 最新版本 ——将便携式软件包解压到任意可写位置并双击运行 xehn.exe。该软件包不包含任何账户：首次连接会为该机器注册一个新的 WARP 设备。
+
+它的作用
+能力	地位
+WARP端点扫描（两阶段探测+隧道验证）	✅ 重复使用自 warpscout
+账户注册/轮换	✅ 重复使用自 warpscout
+AmneziaWG (AWG) 核心	✅amneziawg-go用户空间（扫描）+ mihomo amnezia-wg-option（路由）
+WireGuard	✅ 米赫莫type: wireguard
+面具 / 面具-H2	✅ 米赫莫type: masque+network: h2
+WARP-in-WARP（嵌套）	✅ mihomodialer-proxy链条
+虹吸出口（V1，基座 + 虹吸）	✅psiphon.exe通过本地主机 SOCKS 协议运行 sidecar；connect --psiphon
+退出 IP/延迟/国家/地区显示	✅ 通过混合端口进行实时探测 + 缓存扫描元数据
+扫描结果 + 帐户缓存（TTL）	✅ internal/cache（6 小时 TTL，JSON 格式，重载后仍然存在）
+系统代理模式（默认）	✅ WinINET 注册表 +InternetSetOption通知
+TUN 全局模式（可选）	✅ mihomotun:模块（需要管理员权限；已嵌入 wintun）
+原生图形用户界面（双击便携版）	✅ 侧边栏外壳 — 首页/设置/关于/日志，浅色+深色主题，中文/英文
+许可证通知 + 遥控器	✅ 启动通知；已检查每次安装的控制代码control.json
+便携式 ZIP 卡，卡芯分离	✅ pack.ps1→ v2rayN 风格布局
+核心功能一键下载/更新	✅ GitHub 发布自动配置
+快速入门（便携式，v2rayN 风格）
+# 1. unzip anywhere writable
+# 2. double-click xehn.exe  →  native window opens (Proton style)
+# 3. click 连接 — first run auto-registers a WARP account + scans
+ZIP 布局（pack.ps1组装它）：
+
+XEHN\
+├── xehn.exe             ← the only program file: double-click opens the GUI;
+│                           arguments run the CLI in the calling terminal
+├── core\
+│   ├── mihomo.exe        ← the Clash core — replace this file to update it
+│   ├── psiphon.exe       ← optional: Psiphon exit sidecar (GPL-3.0)
+│   ├── client.config     ← optional: official Psiphon credentials (needed with psiphon.exe)
+│   └── server_list.dat   ← optional: initial Psiphon server list
+└── README.txt
+该 ZIP 文件由全新的暂存树构建而成，不包含 warpscout-account.json任何状态、设置、缓存或日志：新设备没有凭据，因此其首次连接/扫描会注册一个新的 WARP 帐户。warpscout-account.json除非您打算重复使用该设备身份，否则请勿将旧设备与程序一起复制。
+
+可执行文件会自动锚定WARP_CLIENT_HOME到它自己的文件夹（便携模式），因此帐户、缓存、状态、配置和日志都与 exe 文件放在一起——删除该文件夹，所有内容都会消失。
+
+稍后更新核心（核心分离）
+GUI 从不嵌入 mihomo；它core\mihomo.exe以普通文件的形式进行管理：
+
+一键：仪表板→「更新核心」下载最新 mihomo-windows-amd64版本。
+手动操作：将任何 mihomo 构建版本拖放到此处core\mihomo.exe——无需重新构建，无版本锁定。xehn.exe也接受-core PATH指向其他位置的路径。
+图形用户界面
+xehn.exe gui（或者直接双击）即可打开一个 原生 Windows 窗口——该窗口完全由 Windows 系统自行绘制lxn/walk （使用单个CustomWidgetPixels画布；无需浏览器、WebView 或运行时 UI 依赖）。布局采用 1080x700 网格，并根据显示器 DPI 进行缩放，因此在 100% 到 250% 的 Windows 缩放比例下都能保持清晰锐利。
+
+左侧边栏可在四个页面之间切换，页眉包含两个外观切换按钮（主题、语言），因此无需进入设置：
+
+页	内容
+家	连接/断开连接循环显示会话时钟、当前退出状态（标志、数据中心、延迟、连接/断开）、协议选择器（显示实时核心能力状态）、所选节点详情以及实时吞吐量图表
+设置	一页，四张卡片：捕获（系统代理或 VPN/TUN、本地代理端口、LAN 访问、API 端口、带协议门控的地址族、MTU）、路由（代理模式、默认节点、拆分隧道、域列表、地理拆分）、启动/行为（自动启动、自动连接、重新扫描、自动修复、记住页面、超时）、DNS 和退出（预设、无 DNS、Psiphon + 区域）
+关于	版本、数据/核心路径、许可证、客户端和核心更新
+日志	运行日志（按级别标记的控制台）、连接历史记录（连接管道自身的步骤）、诊断信息（可复制）
+主题：浅色（默认）、深色或跟随系统——实时切换，包括标题栏。语言：中文（默认）或英文；所有字符串都经过同一个表，因此如果缺少翻译，则默认显示中文，而不是显示图例。
+
+屏幕截图
+首页— 显示会话时钟、实时出口（标志、托管、延迟、吞吐量）和协议选择器的连接圆圈：
+
+家
+
+设置— 一个可滚动页面：捕获（系统代理或 VPN/TUN、本地端口、LAN 访问、API 端口、地址族、MTU）和路由（预设、默认节点、直接/代理域列表）：
+
+设置 — 捕获和路由
+
+…然后是启动/行为（自动启动、自动连接、重新扫描、自动修复、超时）和 DNS 及退出：
+
+设置 — 行为和 DNS
+
+日志——运行时日志、连接历史记录和可复制的诊断信息：
+
+日志
+
+关于页面遵循相同的网格——此版本、其许可证、更新、远程控制代码以及一张 GitHub 链接卡片——并在 下面的“许可证声明和远程控制”中进行了描述。
+
+同一个窗口的英文版本（语言选择按钮位于“主页”标题栏中，因此无需进入设置）：
+
+英文用户界面
+
+首选项位于settings.json可执行文件（便携布局）旁边，并在连接时应用于引擎：代理模式和域名列表会变成 mihomo 规则，每个应用程序的拆分会变成PROCESS-NAME规则，DNS/MTU/地址族会添加到渲染的配置中。区域拆分仅在核心的根目录geosite.dat（/）geoip.metadb已存在时才提供——mihomo 会在规则出现后立即尝试下载它们，GEOSITE如果无法下载，则会拒绝整个配置，因此该开关保持关闭状态，而不是生成无法启动的配置。
+
+GUI 运行的代码路径与 CLI 完全相同（defaultConnectOptions→ runConnectCmd），因此行为不会发生偏差。
+
+许可证通知和遥控器
+每次启动时都会弹出许可提醒，要求所有构建版本都必须携带此许可——本软件开源免费，仅供学习交流使用，禁止售卖！ ——同样的句子也保留在“关于”页面底部，即使关闭通知后仍然可见。“关于”页面本身并不指向本地：每一行和每一个按钮都会打开一个 GitHub 地址（项目页面、发布版本、问题、通知、许可文本、核心源代码），因为对于在其他机器上阅读此页面的用户来说，指向本地磁盘上的路径毫无意义。
+
+每次安装都会携带一个控制代码（XXXX-XXXX-XXXX-XXXX可在“关于”菜单中显示和复制），该代码源自计算机的 Windows 标识——因此删除 settings.json不会生成新的控制代码。客户端 control.json在启动时以及之后每隔 15 分钟从默认分支读取数据：
+
+{
+  "stop_all": false,
+  "stopped_codes": ["ABCD-EFGH-JKMN-PQRS"],
+  "message": ""
+}
+列出的代码（或stop_all）会阻止该客户端：它拒绝连接，断开已建立的会话，并在屏幕上显示原因。message这会替换默认语句。此检查特意采用失败开放机制：不可达列表会保留之前的判定结果，因此离线的笔记本电脑或阻塞的 GitHub 不会破坏合法的安装，同时判定结果会被缓存，control-state.json 因此重启不会悄悄地将已停止的客户端恢复到服务状态。
+
+建筑学
+xehn (package main)            the warpscout engine (verbatim) +
+                                     the client orchestration layer
+├── cli.go / flags.go                command registry + flag wiring
+├── main.go                          scan command (warpscout)
+├── register.go                      account registration (warpscout)
+├── tunnel.go / masque.go / nest.go  userspace tunnels: AWG/MASQUE/WARP-in-WARP
+├── wgconf.go                        native .conf + mihomo proxy rendering
+├── client.go          ★             full mihomo config renderer + cache glue
+├── connect.go         ★             connect/disconnect/status/list commands
+├── gui.go             ★             GUI/CLI shared entry (defaultConnectOptions)
+├── gui_dispatch.go    ★             `gui` command + double-click entry
+├── gui_native_windows.go ★          window, model, paint dispatch, background loops
+├── gui_theme_windows.go ★           light/dark palettes, theme resolve, dark title bar
+├── gui_i18n_windows.go ★            中文/English string table (tr/trf)
+├── gui_draw_windows.go ★            canvas primitives + widgets (cards, chips, switches)
+├── gui_shell_windows.go ★           sidebar + page header + page routing
+├── gui_page_home_windows.go ★       Home page
+├── gui_page_nodes_windows.go ★      Nodes page (not in the sidebar; node choice is the Settings pin)
+├── gui_page_settings_windows.go ★   Settings page (capture / routing / startup / DNS & exit)
+├── gui_page_logs_windows.go ★       Logs page (run / history / diagnostics)
+├── gui_actions_windows.go ★         id → action routing, settings actions
+├── gui_dialogs_windows.go ★         modal input/confirm, autostart, prefs plumbing
+├── gui_native_stub.go ★             non-Windows no-op (native window = disabled)
+├── settings.go        ★             settings.json model, load/save, normalisation
+├── control.go         ★             per-install control code + remote stop list
+├── control.json       ★             the published stop list the client reads
+│
+├── internal/cache     ★             TTL cache store (account + scan results)
+└── internal/core      ★             mihomo sidecar manager + system proxy
+    ├── core.go                      process lifecycle, config write, readiness
+    ├── download.go                  locate/download mihomo core binary
+    ├── proxy_windows.go             WinINET system proxy set/unset
+    └── proxy_other.go               non-Windows no-op stub
+★= 在 warpscout 引擎之上添加的新代码。
+
+客户引入的两个“核心”
+AWG 核心—— amneziawg-go（已经是 warpscout 的依赖项）。它是用户空间的 AmneziaWG 实现，既用于扫描（验证端点是否确实存在于其声称的位置），也作为 mihomo 代理渲染的基础。
+Clash 核心——mihomo（MetaCubeX/mihomo），以边车二进制文件的形式运行。所有成熟的 Clash 图形用户界面（Clash Verge、FlClash 等）都采用相同的模式：客户端编写完整的配置文件config.yaml，启动核心，通过external-controllerREST API 控制它，并将操作系统指向其混合端口。mihomo 原生支持wireguard(+ amnezia-wg-option)、masque (+ network: h2) 和dialer-proxy链式调用，因此单个嵌入式核心即可覆盖所有四种协议以及用于路由的 WARP-in-WARP。
+建造
+需要 Go 1.26+（模块目标版本为 1.26.3）。在 proxy.golang.org无法访问的网络上，请将 Go 指向镜像站点：
+
+$env:GOMODCACHE='E:\xiaohe\xhwarp\.gomod'
+$env:GOCACHE='E:\xiaohe\xhwarp\.gocache'
+$env:GOPATH='E:\xiaohe\xhwarp\.gopath'
+$env:GOPROXY='https://goproxy.cn,direct'
+
+# one program file: double-click opens the GUI, arguments run the CLI
+go build -trimpath -ldflags "-s -w -H windowsgui -X main.version=1.0 -X main.windowsGUIBuild=1" -o xehn.exe .
+
+# everything above + the portable ZIP in dist\ (the supported release path):
+powershell -ExecutionPolicy Bypass -File .\pack.ps1 [-MihomoPath <mihomo.exe>] [-PsiphonExePath <psiphon.exe>] [-PsiphonConfigPath <client.config>]
+本地窗口链接嵌入到 Win32 清单（comctl32 v6）中 rsrc_windows_amd64.syso——如果没有它， 启动lxn/walk时会失败 TTM_ADDTOOL failed。使用（安装一次）pack.ps1重新生成。.sysoapp.manifestakavel/rsrcgo install github.com/akavel/rsrc@latest
+
+-H windowsgui它会移除控制台子系统标志，因此双击不会弹出终端窗口。同一个二进制文件仍然为命令行界面 (CLI) 提供服务：它通过一个子命令连接到调用者的控制台并重新打开其标准流。如果没有连接控制台，图形用户界面 (GUI) 会将所有输出（包括它自身的输出和 mihomo 核心的输出）重定向到xehn.logexe 文件旁边。由于 Windows 不会等待 GUI 子系统进程完成，cmd因此会立即返回到其提示符，而 register/connect 命令则在后台继续运行；它们的输出会一直连接到该终端。
+
+用法
+# 0. no arguments at all → the native GUI window (double-click equivalent)
+xehn.exe
+xehn.exe gui      # force the native window
+
+# 1. register a WARP account
+xehn register
+
+# 2. connect — scans (cached 6h), picks best endpoint, starts core, sets proxy
+xehn connect -p awg
+xehn connect -p wg
+xehn connect -p masque
+xehn connect -p masque-h2
+xehn connect --tun            # TUN global mode (needs admin)
+xehn connect --scan-now       # force re-scan, ignore cache
+xehn connect -p awg --psiphon # base protocol + Psiphon exit (final IP = Psiphon)
+
+# 3. show current exit IP / latency / country
+xehn status
+
+# 4. list cached endpoints
+xehn list
+xehn list -p wg
+
+# 5. disconnect — stops core, restores prior system-proxy state
+xehn disconnect
+
+# raw engine commands (from warpscout) still work:
+xehn scan -best -p awg
+xehn scan -conf - -conf-type mihomo -p awg
+便携式/定制住宅
+如果WARP_CLIENT_HOME未设置，客户端会自动将其主目录锚定到可执行文件的文件夹（如果可写，例如解压后的 ZIP 文件），否则回退到 %APPDATA%\xehn默认目录。要将其固定到默认目录，请显式设置该变量：
+
+$env:WARP_CLIENT_HOME='D:\warp-portable'
+xehn connect
+虹吸出口（V1）
+Psiphon 是一个出口，而不是第五个协议。connect --psiphon它首先启动基础协议（WG/AWG/MASQUE），将 Psiphon 的上游指向该本地主机 SOCKS，并将 Psiphon 作为最终出口——因此公共出口 IP 变为 Psiphon 的 IP。会话是一个组合：status例如，显示session=AWG-Psiphon，而state.Proto保持基础协议（awg），交换机位于 psiphon_mode。
+
+资产——两者都是必需的；connect --psiphon如果缺少其中任何一项，系统都会快速报错并显示明确的错误信息：
+
+资产	默认位置	覆盖
+Psiphon 可执行文件	core\psiphon.exe	--psiphon-exe标志，否则PSIPHON_EXE环境
+官方客户端配置	core\client.config， 然后core\psiphon.config	PSIPHON_CONFIG环境
+客户端配置包含SponsorId/ PropagationChannelId/ RemoteServerListURLs/ObfuscatedServerListRootURLs及其签名密钥——如果没有这些密钥，Psiphon 将无法发现任何服务器，也永远不会建立隧道。 server_list.dat旁边的 / 用作初始服务器列表。
+
+xehn connect -p awg --psiphon
+xehn status            # session=AWG-Psiphon  endpoint=…  exit=<Psiphon exit IP>
+psiphon-tunnel-core是GPL-3.0 许可的。它作为一个独立的psiphon.exe 进程通过本地主机 SOCKS 驱动，并且永远不会链接到此二进制文件中。 当存在（或通过/ 传递）时，它会将/ /pack.ps1打包进去 。psiphon.execlient.configserver_list.datcore\-PsiphonExePath-PsiphonConfigPath
+
+由于 ZIP 文件包含 GPL-3.0 二进制文件（包括 mihomo），因此该软件包也包含许可文本和义务清单：请参阅 THIRD_PARTY_NOTICES.mdZIP licenses/GPL-3.0.txt文件中的相关文件。公开分发前需要进行法律审查——该文件是一份工程清单，而非法律结论。
+
+TUN模式
+--tun在 mihomo 配置中添加一个tun:阻塞，并将所有流量路由到虚拟接口而不是系统代理。要求：
+
+请以管理员身份（提升权限）运行客户端。mihomo 构建的此客户端已内置 wintun，因此无需额外安装wintun.dll。
+测试
+go test ./...          # hermetic suite
+
+# + real-core integration test (renders configs for all 4 protocols, boots a
+#   real mihomo, asserts controller + proxy registration + mixed-port):
+$env:WARP_TEST_MIHOMO='path\to\mihomo.exe'
+go test -v -run TestMihomoAcceptsRenderedConfig .
+internal/cache— put/get 往返、TTL 过期、重新加载生存、损坏文件恢复。—internal/core配置验证、原子写入、就绪超时。— package main缓存扫描往返、状态持久性、list/status 干净降级、端点排名平局打破、便携式主目录覆盖，以及（通过）跨/ / / 的WARP_TEST_MIHOMO实时核心集成。awgwgmasquemasque-h2
+
+关于
+未提供描述、网站或主题。
+资源
+自述文件
+活动
+星星
+106颗星
+观察者
+1 人正在观看
+叉子
+58个叉子
+报告库
